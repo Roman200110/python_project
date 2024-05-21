@@ -1,63 +1,133 @@
 import torch
-import torch.nn as nn
-import torch.optim as optim
-
+import numpy as np
+import pandas as pd
+import os
+import math
+from tqdm import tqdm
+import sys
+from pycocotools.coco import COCO
+from pycocotools.cocoeval import COCOeval
+from src.utils import save_checkpoint
 
 class Trainer:
     """
-    A class used to train and evaluate the animal classification model.
+    A class to represent the training process.
 
     Attributes
     ----------
-    model : AnimalClassifier
-        The model to be trained.
-    criterion : torch.nn.Module
-        The loss function.
+    model : torch.nn.Module
+        the neural network model
     optimizer : torch.optim.Optimizer
-        The optimizer.
-    train_loader : torch.utils.data.DataLoader
-        DataLoader for the training set.
-    val_loader : torch.utils.data.DataLoader
-        DataLoader for the validation set.
+        the optimizer
+    device : torch.device
+        the device to run the model on (CPU or GPU)
+    checkpoint_dir : str
+        directory to save checkpoints
 
     Methods
     -------
-    train(epochs):
-        Trains the model for a specified number of epochs.
-    evaluate():
-        Evaluates the model's performance on the validation set.
+    train_one_epoch(loader, epoch):
+        Trains the model for one epoch.
+    validate(loader):
+        Validates the model on the validation set.
+    train(train_loader, valid_loader, num_epochs):
+        Trains the model for the given number of epochs.
+    save_checkpoint(epoch):
+        Saves the model checkpoint.
     """
 
-    def __init__(self, model, train_loader, val_loader, lr: float = 0.001):
+    def __init__(self, model, optimizer, device, checkpoint_dir='checkpoints'):
         self.model = model
-        self.criterion = nn.CrossEntropyLoss()
-        self.optimizer = optim.Adam(self.model.parameters(), lr=lr)
-        self.train_loader = train_loader
-        self.val_loader = val_loader
+        self.optimizer = optimizer
+        self.device = device
+        self.checkpoint_dir = checkpoint_dir
+        os.makedirs(checkpoint_dir, exist_ok=True)
 
-    def train(self, epochs: int = 10):
+    def train_one_epoch(self, loader, epoch):
+        """Trains the model for one epoch."""
         self.model.train()
-        for epoch in range(epochs):
-            running_loss = 0.0
-            for inputs, labels in self.train_loader:
-                self.optimizer.zero_grad()
-                outputs = self.model(inputs)
-                loss = self.criterion(outputs, labels)
-                loss.backward()
-                self.optimizer.step()
-                running_loss += loss.item()
-            print(f"Epoch {epoch + 1}, Loss: {running_loss / len(self.train_loader)}")
+        all_losses = []
+        all_losses_dict = []
 
-    def evaluate(self):
+        for images, targets in tqdm(loader):
+            images = list(image.to(self.device) for image in images)
+            targets = [{k: v.to(self.device) for k, v in t.items()} for t in targets]
+
+            loss_dict = self.model(images, targets)
+            losses = sum(loss for loss in loss_dict.values())
+            loss_value = losses.item()
+
+            all_losses.append(loss_value)
+            all_losses_dict.append({k: v.item() for k, v in loss_dict.items()})
+
+            if not math.isfinite(loss_value):
+                print(f"Loss is {loss_value}, stopping training")
+                print(loss_dict)
+                sys.exit(1)
+
+            self.optimizer.zero_grad()
+            losses.backward()
+            self.optimizer.step()
+
+        all_losses_dict = pd.DataFrame(all_losses_dict)
+        print(f"Epoch {epoch}, Loss: {np.mean(all_losses):.4f}")
+        print(all_losses_dict.mean())
+
+    def validate(self, loader, coco_gt):
+        """Validates the model on the validation set."""
         self.model.eval()
-        correct = 0
-        total = 0
+        results = []
+
         with torch.no_grad():
-            for inputs, labels in self.val_loader:
-                outputs = self.model(inputs)
-                _, predicted = torch.max(outputs.data, 1)
-                total += labels.size(0)
-                correct += (predicted == labels).sum().item()
-        accuracy = 100 * correct / total
-        print(f"Accuracy: {accuracy}%")
-        return accuracy
+            for images, targets in tqdm(loader):
+                images = list(image.to(self.device) for image in images)
+                outputs = self.model(images)
+
+                for i, output in enumerate(outputs):
+                    image_id = targets[i]["image_id"].item()
+                    for box, score, label in zip(output["boxes"], output["scores"], output["labels"]):
+                        bbox = box.tolist()
+                        # Convert to COCO format: [x_min, y_min, width, height]
+                        bbox[2] -= bbox[0]
+                        bbox[3] -= bbox[1]
+                        results.append({
+                            "image_id": image_id,
+                            "category_id": label.item(),
+                            "bbox": bbox,
+                            "score": score.item()
+                        })
+
+        # Load results into COCO API
+        coco_dt = coco_gt.loadRes(results)
+
+        # Evaluate the results
+        coco_eval = COCOeval(coco_gt, coco_dt, iouType='bbox')
+        coco_eval.params.iouThrs = np.array([0.5])
+        coco_eval.evaluate()
+        coco_eval.accumulate()
+        coco_eval.summarize()
+
+        # Print mAP@0.5
+        print(f"mAP@0.5: {coco_eval.stats[1]:.4f}")
+
+    def train(self, train_loader, valid_loader, coco_gt, num_epochs):
+        """Trains the model for the given number of epochs."""
+        for epoch in range(num_epochs):
+            self.train_one_epoch(train_loader, epoch)
+
+            if (epoch + 1) % 2 == 0:
+                print(f"Validating at epoch {epoch + 1}")
+                self.validate(valid_loader, coco_gt)
+
+            self.save_checkpoint(epoch)
+
+    def save_checkpoint(self, epoch):
+        """Saves the model checkpoint."""
+        checkpoint_path = os.path.join(self.checkpoint_dir, f'model_epoch_{epoch}.pth')
+        state = {
+            'epoch': epoch,
+            'model_state_dict': self.model.state_dict(),
+            'optimizer_state_dict': self.optimizer.state_dict()
+        }
+        save_checkpoint(state, checkpoint_path)
+        print(f'Checkpoint saved at {checkpoint_path}')

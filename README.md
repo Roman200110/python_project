@@ -10,15 +10,19 @@ animal-classification/
 │   ├── raw/
 ├── src/
 │   ├── __init__.py
+│   ├── api.py
 │   ├── data_loader.py
+│   ├── demo.py
 │   ├── model.py
 │   ├── trainer.py
+│   ├── utils.py
 ├── tests/
 │   ├── __init__.py
 │   ├── test_data_loader.py
 │   ├── test_model.py
 │   ├── test_trainer.py
-├── main.py
+│   ├── test_utils.py
+├── train.py
 ├── README.md
 ├── requirements.txt
 ```
@@ -47,18 +51,12 @@ animal-classification/
     ```
 
 ### Download Dataset
-1. Ensure you have the Kaggle API set up and your Kaggle credentials are stored in `~/.kaggle/kaggle.json`.
-2. Download and extract the iNaturalist 2019 dataset:
-    ```bash
-    kaggle competitions download -c inaturalist-2019-fgvc6 -p data/raw
-    unzip data/raw/train_val2019.zip -d data/raw
-    unzip data/raw/test2019.zip -d data/raw
-    ```
+1. Ensure you have downloaded the dataset from [roboflow](https://universe.roboflow.com/wild-animals-datasets/tawiri-02/dataset/3) and placed it in the `data/raw` directory.
 
 ### Training the Model
 Run the training script:
 ```bash
-python main.py
+python train.py
 ```
 
 ### Testing
@@ -85,9 +83,9 @@ This project adheres to the Google Python Style Guide. Docstrings are included t
 
 ### Code Structure
 - `data_loader.py`: Handles data loading and preprocessing.
-- `model.py`: Defines the CNN model architecture.
+- `model.py`: Used Faster R-CNN for object detection.
 - `trainer.py`: Contains the training and evaluation logic.
-- `main.py`: Script to run the training and evaluation.
+- `train.py`: Script to run the training and evaluation.
 
 ### Tests
 - `test_data_loader.py`: Tests for data loading functionality.
@@ -97,7 +95,6 @@ This project adheres to the Google Python Style Guide. Docstrings are included t
 ## Acknowledgements
 - [PyTorch](https://pytorch.org/)
 - [FastAPI](https://fastapi.tiangolo.com/)
-- [Kaggle](https://www.kaggle.com/)
 
 ## Contributing
 If you would like to contribute, please open an issue or submit a pull request.

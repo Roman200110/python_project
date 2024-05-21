@@ -1,22 +1,36 @@
 import torch
-import torch.nn as nn
-import torch.hub
+import torchvision.models as models
+from torch import nn
 
 
-class AnimalClassifier(nn.Module):
+class AnimalClassifier:
     """
-    A class used to represent the CNN model for animal classification.
+    A class to represent the FasterRCNN Model.
+
+    Attributes
+    ----------
+    num_classes : int
+        number of classes in the dataset
 
     Methods
     -------
-    forward(x):
-        Defines the forward pass of the model.
+    get_model():
+        Returns the FasterRCNN model.
     """
 
-    def __init__(self, num_classes: int = 4):
-        super(AnimalClassifier, self).__init__()
-        self.model = torch.hub.load('pytorch/vision:v0.10.0', 'resnet18', pretrained=True)
-        self.model.fc = nn.Linear(self.model.fc.in_features, num_classes)
+    def __init__(self, num_classes):
+        """
+        Constructs all the necessary attributes for the FasterRCNN object.
 
-    def forward(self, x):
-        return self.model(x)
+        Parameters
+        ----------
+            num_classes : int
+                number of classes in the dataset
+        """
+        self.model = models.detection.fasterrcnn_mobilenet_v3_large_fpn(pretrained=True)
+        in_features = self.model.roi_heads.box_predictor.cls_score.in_features
+        self.model.roi_heads.box_predictor = models.detection.faster_rcnn.FastRCNNPredictor(in_features, num_classes)
+
+    def get_model(self):
+        """Returns the FasterRCNN model."""
+        return self.model

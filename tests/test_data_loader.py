@@ -1,11 +1,14 @@
 import pytest
-from src.data_loader import DataLoader
+from src.data_loader import CustomDataset, get_transforms, create_dataloaders
 
-@pytest.fixture
-def data_loader():
-    return DataLoader("data/raw/train_val2019")
+def test_custom_dataset():
+    dataset_path = "path/to/your/dataset"  # Update this to your dataset path
+    dataset = CustomDataset(root=dataset_path, split='train', transforms=get_transforms(True))
+    assert len(dataset) > 0
 
-def test_load_data(data_loader):
-    train_loader, val_loader = data_loader.load_data(batch_size=32)
-    assert len(train_loader.dataset) > 0
-    assert len(val_loader.dataset) > 0
+def test_create_dataloaders():
+    dataset_path = "path/to/your/dataset"  # Update this to your dataset path
+    train_loader, valid_loader, test_loader = create_dataloaders(dataset_path)
+    assert len(train_loader) > 0
+    assert len(valid_loader) > 0
+    assert len(test_loader) > 0

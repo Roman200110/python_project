@@ -1,12 +1,8 @@
 import pytest
-import torch
 from src.model import AnimalClassifier
 
-@pytest.fixture
-def model():
-    return AnimalClassifier(num_classes=4)
-
-def test_model_forward(model):
-    inputs = torch.randn(1, 3, 224, 224)
-    outputs = model(inputs)
-    assert outputs.shape == (1, 4)
+def test_model_initialization():
+    num_classes = 10
+    model = AnimalClassifier(num_classes).get_model()
+    assert model is not None
+    assert model.roi_heads.box_predictor.cls_score.out_features == num_classes
