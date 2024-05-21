@@ -1,5 +1,6 @@
 import torch
 import torchvision.models as models
+from torchvision.models.detection import FasterRCNN_MobileNet_V3_Large_FPN_Weights
 from torch import nn
 
 
@@ -27,7 +28,8 @@ class AnimalClassifier:
             num_classes : int
                 number of classes in the dataset
         """
-        self.model = models.detection.fasterrcnn_mobilenet_v3_large_fpn(pretrained=True)
+        # Use the recommended way to load pretrained weights
+        self.model = models.detection.fasterrcnn_mobilenet_v3_large_fpn(weights=FasterRCNN_MobileNet_V3_Large_FPN_Weights.COCO_V1)
         in_features = self.model.roi_heads.box_predictor.cls_score.in_features
         self.model.roi_heads.box_predictor = models.detection.faster_rcnn.FastRCNNPredictor(in_features, num_classes)
 

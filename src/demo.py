@@ -94,8 +94,8 @@ def demo_image(image_path, model, device, classes, threshold=0.8):
 
 if __name__ == "__main__":
     dataset_path = "/home/roman/roman/master_lessons/second_semester/python 2/python_project/data/raw/TAWIRI 02.v3i.coco"  # Update this to your dataset path
-    num_classes = len(COCO(os.path.join(dataset_path, "test", "_annotations.coco.json")).cats.keys())
-    classes = [v['name'] for k, v in COCO(os.path.join(dataset_path, "test", "_annotations.coco.json")).cats.items()]
+    num_classes = len(COCO(os.path.join(dataset_path, "test", "_annotations_bbox.coco.json")).cats.keys())
+    classes = [v['name'] for k, v in COCO(os.path.join(dataset_path, "test", "_annotations_bbox.coco.json")).cats.items()]
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
