@@ -23,7 +23,7 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 model = AnimalClassifier(num_classes).get_model().to(device)
 
 # Load the trained checkpoint
-checkpoint_path = "/home/roman/roman/master_lessons/second_semester/python 2/python_project/checkpoints/model_epoch_9.pth"  # Update this to the actual checkpoint path
+checkpoint_path = "/home/roman/roman/master_lessons/second_semester/python 2/python_project/checkpoints/model_epoch_20.pth"  # Update this to the actual checkpoint path
 optimizer = torch.optim.SGD([p for p in model.parameters() if p.requires_grad], lr=0.01, momentum=0.9,
                             weight_decay=1e-4)
 epoch = load_checkpoint(checkpoint_path, model, optimizer)

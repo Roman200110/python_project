@@ -14,16 +14,18 @@ def train():
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
+
     model = AnimalClassifier(num_classes).get_model().to(device)
 
     train_loader, valid_loader = create_dataloaders(dataset_path)
+
 
     optimizer = torch.optim.SGD([p for p in model.parameters() if p.requires_grad], lr=0.01, momentum=0.9, weight_decay=1e-4)
 
     coco_gt = COCO(os.path.join(dataset_path, "valid", "_annotations_bbox.coco.json"))
 
     trainer = Trainer(model, optimizer, device)
-    num_epochs = 10
+    num_epochs = 21
     trainer.train(train_loader,valid_loader, coco_gt, num_epochs)
 
 if __name__ == "__main__":
