@@ -3,13 +3,19 @@ from PIL import Image
 from fastapi import FastAPI, File, UploadFile
 from fastapi.responses import JSONResponse, StreamingResponse
 from torchvision import transforms as T
-from model import AnimalClassifier
-from utils import load_checkpoint
+from src.model import AnimalClassifier
+from src.utils import load_checkpoint
 import os
 import io
 from torchvision.utils import draw_bounding_boxes
 import matplotlib.pyplot as plt
 from pycocotools.coco import COCO
+from pycocotools.cocoeval import COCOeval
+
+from src.data_loader import create_dataloaders, CustomDataset, get_transforms
+from torch.utils.data import DataLoader
+from src.trainer import Trainer
+from tqdm import tqdm
 
 app = FastAPI()
 
@@ -50,7 +56,7 @@ def load_image(image_file):
     return image
 
 
-def get_detections(model, image, device, classes, threshold=0.8):
+def get_detections(model, image, device, classes, threshold=0.6):
     """
     Get detections for an image using the trained model.
 
@@ -82,6 +88,42 @@ def get_detections(model, image, device, classes, threshold=0.8):
     labels = [classes[i] for i in pred['labels'][pred['scores'] > threshold].tolist()]
 
     return {'boxes': boxes, 'labels': labels}
+
+
+def collate_fn(batch):
+    """Combines a list of samples to form a mini-batch of Tensor(s)."""
+    return tuple(zip(*batch))
+
+
+def evaluate_model():
+    """
+    Evaluate the model on the test dataset.
+
+    Returns
+    -------
+    float
+        The mAP@0.5 score
+    """
+    split = 'test'
+    # Load the ground truth COCO annotations
+    ann_file = os.path.join(dataset_path, split, '_annotations_bbox.coco.json')
+    coco_gt = COCO(ann_file)
+
+    test_dataset = CustomDataset(root=dataset_path, split='test', transforms=get_transforms(False))
+
+    test_loader = DataLoader(test_dataset, batch_size=4, shuffle=False, num_workers=4, collate_fn=collate_fn)
+
+    # Load model
+    num_classes = len(coco_gt.cats.keys())
+    model = AnimalClassifier(num_classes).get_model().to(device)
+
+    optimizer = torch.optim.SGD([p for p in model.parameters() if p.requires_grad], lr=0.01, momentum=0.9, weight_decay=1e-4)
+
+    load_checkpoint(checkpoint_path, model, optimizer)
+    trainer = Trainer(model, optimizer, device)
+
+    mAP_05 = trainer.validate(test_loader, coco_gt)
+    return mAP_05
 
 
 @app.get("/")
@@ -117,8 +159,7 @@ async def create_upload_file(file: UploadFile = File(...)):
         detections = get_detections(model, image, device, classes)
 
         img_int = torch.tensor(image * 255, dtype=torch.uint8)
-        img_with_boxes = draw_bounding_boxes(img_int, detections['boxes'], detections['labels'], width=4).permute(1, 2,
-                                                                                                                  0).cpu().numpy()
+        img_with_boxes = draw_bounding_boxes(img_int, detections['boxes'], detections['labels'], width=4).permute(1, 2, 0).cpu().numpy()
 
         fig, ax = plt.subplots(1, 1, figsize=(12, 9))
         ax.imshow(img_with_boxes)
@@ -130,6 +171,24 @@ async def create_upload_file(file: UploadFile = File(...)):
         buf.seek(0)
 
         return StreamingResponse(buf, media_type="image/png")
+
+    except Exception as e:
+        return JSONResponse(content={"message": str(e)}, status_code=500)
+
+
+@app.post("/evaluate/")
+def evaluate():
+    """
+    Endpoint to evaluate the model on the test dataset.
+
+    Returns
+    -------
+    JSONResponse
+        A response containing the mAP@0.5 score
+    """
+    try:
+        mAP_05 = evaluate_model()
+        return JSONResponse(content={"mAP@0.5": mAP_05}, status_code=200)
 
     except Exception as e:
         return JSONResponse(content={"message": str(e)}, status_code=500)

@@ -77,7 +77,7 @@ class Trainer:
         """Validates the model on the validation set."""
         self.model.eval()
         results = []
-
+        img_ids = set(coco_gt.getImgIds())
         with torch.no_grad():
             for images, targets in tqdm(loader):
                 images = list(image.to(self.device) for image in images)
@@ -85,6 +85,8 @@ class Trainer:
 
                 for i, output in enumerate(outputs):
                     image_id = targets[i]["image_id"].item()
+                    # if image_id not in img_ids:
+                    #     continue
                     for box, score, label in zip(output["boxes"], output["scores"], output["labels"]):
                         bbox = box.tolist()
                         # Convert to COCO format: [x_min, y_min, width, height]
@@ -107,8 +109,8 @@ class Trainer:
         coco_eval.accumulate()
         coco_eval.summarize()
 
-        # Print mAP@0.5
-        print(f"mAP@0.5: {coco_eval.stats[1]:.4f}")
+        # print(f"mAP@0.5: {coco_eval.stats[1]:.4f}")
+        return coco_eval.stats[1]
 
     def train(self, train_loader, valid_loader, coco_gt, num_epochs):
         """Trains the model for the given number of epochs."""
