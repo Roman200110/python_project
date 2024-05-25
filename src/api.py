@@ -1,6 +1,5 @@
 import torch
 from PIL import Image
-from fastapi import FastAPI, File, UploadFile
 from fastapi.responses import JSONResponse, StreamingResponse
 from torchvision import transforms as T
 from src.model import AnimalClassifier
@@ -10,14 +9,31 @@ import io
 from torchvision.utils import draw_bounding_boxes
 import matplotlib.pyplot as plt
 from pycocotools.coco import COCO
-from pycocotools.cocoeval import COCOeval
 
 from src.data_loader import create_dataloaders, CustomDataset, get_transforms
 from torch.utils.data import DataLoader
 from src.trainer import Trainer
 from tqdm import tqdm
 
-app = FastAPI()
+from fastapi import FastAPI, File, UploadFile, responses
+from fastapi.staticfiles import StaticFiles
+from fastapi.templating import Jinja2Templates
+
+app = FastAPI(
+    title="Animal Classification Project",
+    description="""
+Overview
+This project is an animal detection and classification system using a Faster R-CNN model implemented in PyTorch. The model identifies and classifies animals in images into different categories. The project follows object-oriented programming principles, includes detailed docstrings, and is designed with modularity and reusability in mind. Additionally, it includes a web API built with FastAPI for serving predictions.
+
+Dataset
+The dataset used for this project can be downloaded from [here](https://universe.roboflow.com/wild-animals-datasets/tawiri-02/dataset/3).
+
+Acknowledgements
+- [PyTorch](https://pytorch.org/)
+- [FastAPI](https://fastapi.tiangolo.com/)
+    """,
+    docs_url="/docs"
+)
 
 # Setup the dataset and model parameters
 dataset_path = "/home/roman/roman/master_lessons/second_semester/python 2/python_project/data/raw/TAWIRI 02.v3i.coco"  # Update this to your dataset path

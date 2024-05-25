@@ -1,8 +1,7 @@
 # Animal Classification Project
 
 ## Overview
-This project is an animal classification system using a Convolutional Neural Network (CNN) implemented in PyTorch. The model classifies images into different animal categories. The project follows object-oriented programming principles, includes detailed docstrings, and is designed with modularity and reusability in mind. Additionally, it includes a web API built with FastAPI for serving predictions.
-
+This project is an animal detection and classification system using a Faster R-CNN model implemented in PyTorch. The model identifies and classifies animals in images into different categories. The project follows object-oriented programming principles, includes detailed docstrings, and is designed with modularity and reusability in mind. Additionally, it includes a web API built with FastAPI for serving predictions.
 ## Project Structure
 ```
 animal-classification/
@@ -14,6 +13,7 @@ animal-classification/
 │   ├── data_loader.py
 │   ├── demo.py
 │   ├── model.py
+│   ├── evaluate.py
 │   ├── trainer.py
 │   ├── utils.py
 ├── tests/
@@ -82,22 +82,24 @@ curl -X POST "http://127.0.0.1:8000/predict" -F "file=@path_to_your_image.jpg"
 This project adheres to the Google Python Style Guide. Docstrings are included to describe classes, methods, and functions. The code is modular and designed for reusability.
 
 ### Code Structure
+- `api.py`: Contains the FastAPI application for serving predictions.
 - `data_loader.py`: Handles data loading and preprocessing.
+- `demo.py`: Contains a demo script for running inference on a single image.
+- `evaluate.py`: Contains the evaluation logic.
 - `model.py`: Used Faster R-CNN for object detection.
 - `trainer.py`: Contains the training and evaluation logic.
+- `utils.py`: Contains utility functions.
 - `train.py`: Script to run the training and evaluation.
 
 ### Tests
 - `test_data_loader.py`: Tests for data loading functionality.
 - `test_model.py`: Tests for model architecture and forward pass.
 - `test_trainer.py`: Tests for training and evaluation routines.
-
+- `test_utils.py`: Tests for utility functions.
+- 
 ## Acknowledgements
 - [PyTorch](https://pytorch.org/)
 - [FastAPI](https://fastapi.tiangolo.com/)
 
 ## Contributing
 If you would like to contribute, please open an issue or submit a pull request.
-
-## License
-This project is licensed under the MIT License. See the LICENSE file for details.
